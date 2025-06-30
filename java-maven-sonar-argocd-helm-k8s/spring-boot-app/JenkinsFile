@@ -1,27 +1,14 @@
 pipeline {
-  agent {
-    docker {
-      image 'maven:3.9.4-eclipse-temurin-17'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
-
-  environment {
-    SONAR_URL = "http://3.86.115.92:9000"
-    DOCKER_IMAGE = "rajujilla/ultimate-cicd:${BUILD_NUMBER}"
-    GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
-    GIT_USER_NAME = "raju0509"
-  }
+  agent none
 
   stages {
-    stage('Checkout') {
-      steps {
-        // Optional: If you're using `Jenkinsfile` from Git, checkout is already done
-        sh 'echo "Checked out source code."'
-      }
-    }
-
     stage('Build and Test') {
+      agent {
+        docker {
+          image 'maven:3.9.4-eclipse-temurin-17'
+          args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+      }
       steps {
         sh '''
           cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
@@ -31,6 +18,12 @@ pipeline {
     }
 
     stage('Static Code Analysis') {
+      agent {
+        docker {
+          image 'maven:3.9.4-eclipse-temurin-17'
+          args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+      }
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
           sh '''
@@ -42,6 +35,12 @@ pipeline {
     }
 
     stage('Build and Push Docker Image') {
+      agent {
+        docker {
+          image 'maven:3.9.4-eclipse-temurin-17'
+          args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+      }
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh '''
@@ -55,7 +54,9 @@ pipeline {
       }
     }
 
+    // ✅ Native Jenkins agent for git commit/push
     stage('Update Deployment File') {
+      agent any
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
@@ -69,5 +70,12 @@ pipeline {
         }
       }
     }
+  }
+
+  environment {
+    SONAR_URL = "http://3.86.115.92:9000"
+    DOCKER_IMAGE = "rajujilla/ultimate-cicd:${BUILD_NUMBER}"
+    GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
+    GIT_USER_NAME = "raju0509"
   }
 }
